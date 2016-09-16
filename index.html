@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8 />
+    <title>Energy in the US</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+    <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.js"></script>
+
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: whitesmoke;
+            font-family: Lato, sans-serif;
+            color: #0D0000;
+        }
+        header {
+            padding: 6px 10%;
+        }
+        h1 {
+            display: inline-block;
+            margin-right: 20px;
+            color: #001323;
+        }
+        h2 {
+            display: inline-block;
+            color: #001323;
+        }
+        #map {
+            width: 80%;
+            height: 540px;
+            margin: 10px auto;
+        }
+        footer {
+            padding: 6px 10%;
+            width: 80%;
+        }
+        p {
+            font-size: 1em;
+            color: #001323;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Energy in the US</h1>
+        <h2>Locations of coal, natural gas and nuclear power plants</h2>
+    </header>
+
+    <div id='map'></div>
+
+    <footer>
+        <p>Map Author: Amber J. Bosse (amber.j.bosse@uky.edu)</p>
+        <p></p>
+    </footer>
+
+    <script src="power-plants.js"></script>
+    <script>
+
+       var map = L.map('map', {
+          center: [36,-94],
+          zoom: 4,
+      });
+      
+      var tiles = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+          subdomains: 'abcd',
+          maxZoom: 19
+      });  
+      
+      tiles.addTo(map);
+        
+         var commonStyles={ 
+            weight: 1,
+            stroke: 1,
+            fillOpacity: .5
+        };
+    
+        var layerInfo = {
+            coalLayer: {source:"Coal", color:'#00e6e6'}, 
+            naturalGasLayer: {source:"Natural Gas", color:'#e65c00'},
+            nuclearLayer: {source:"Nuclear", color:'#9933ff'}
+        };
+
+        var geoJsonLayers = {};
+
+        for(var layer in layerInfo) {     
+            geoJsonLayers[layer] = L.geoJson(plants, {
+                pointToLayer: function(feature,latlng) {
+                    return L.circleMarker(latlng, commonStyles);
+                    },
+            filter: function(feature) {
+                if(feature.properties.fuel_source[layerInfo[layer].source]) {
+                    return feature;
+                }
+            },
+            style: function(feature) {
+                return {
+                    color: layerInfo[layer].color,
+                    fillColor: layerInfo[layer].color,
+                    radius: getRadius(feature.properties.fuel_source[layerInfo[layer].source])
+                } 
+            }, 
+				
+        }).addTo(map);  
+		
+        };
+       
+        function getRadius(val) {
+            var radius = Math.sqrt(val/Math.PI);
+            return radius * .75;   
+        }
+
+        var sourcesLabels = {
+            "<b style='color:#00e6e6;text-shadow: 0px 0px 1px #d9d9d9;'>Coal</b>": geoJsonLayers.coalLayer,
+            "<b style='color:#e65c00'>Natural Gas</b>": geoJsonLayers.naturalGasLayer,
+            "<b style='color:#9933ff'>Nuclear</b>": geoJsonLayers.nuclearLayer,
+        }
+
+        L.control.layers(null, sourcesLabels, { collapsed:false }).addTo(map);
+		
+		map.on('click', function(e){
+		  for(var layer in layerInfo){
+			geoJsonLayers[layer].eachLayer(function(l) {
+                
+                var distance = e.latlng.distanceTo(l.getLatLng())/1000;
+                
+                if(distance > 500) {
+                    l.setStyle({
+                            stroke: false,
+                            fill: false
+                        });  
+                } else {
+                    l.setStyle({
+                        stroke: true,
+                        fill: true
+                    });
+                    
+                    // alias for properties
+                    var props = l.feature.properties;
+                    
+                    // add plant name to popup content string
+                    var content = props.plant_name + "<br>";
+                        
+                    // add layer fuel source info info to content string
+                    // layerInfo[layer].source is equal to "Coal", and 
+                    // props.fuel_source["Coal"] gives you the value of the "Coal" attribute
+                    content += layerInfo[layer].source + 
+                            ' ' + props.fuel_source[layerInfo[layer].source].toLocaleString() + 
+                            "<br>";
+                    
+                    //
+                    content += "I am <b>"+distance.toLocaleString()+ 
+                                       "km</b><br> from the click point."
+                    
+                    l.bindPopup(content);
+                }
+			}); 
+		  }; 
+		});
+    </script>
+    
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
